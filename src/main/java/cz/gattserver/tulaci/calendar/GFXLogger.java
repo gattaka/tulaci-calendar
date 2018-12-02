@@ -10,5 +10,11 @@ public class GFXLogger {
 		JOptionPane.showMessageDialog(frame, msg, "Chyba", JOptionPane.ERROR_MESSAGE);
 		frame.dispose();
 	}
+	
+	public static void showSuccess(String msg) {
+		JFrame frame = new JFrame();
+		JOptionPane.showMessageDialog(frame, msg, "Info", JOptionPane.PLAIN_MESSAGE);
+		frame.dispose();
+	}
 
 }

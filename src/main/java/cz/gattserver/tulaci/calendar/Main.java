@@ -16,8 +16,10 @@ public class Main {
 		CalendarBuilder calendarBuilder = new CalendarBuilder();
 		try {
 			calendarBuilder.build();
+			GFXLogger.showSuccess("Generování kalendáře dopadlo úspěšně");
 		} catch (Exception e) {
 			GFXLogger.showError(e.getMessage());
+			return;
 		}
 
 	}
