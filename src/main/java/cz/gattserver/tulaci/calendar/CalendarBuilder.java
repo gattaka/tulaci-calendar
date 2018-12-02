@@ -10,6 +10,7 @@ import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -43,6 +44,16 @@ public class CalendarBuilder {
 
 	private Map<String, String> svatkyMap;
 	private Map<LocalDate, String> birthdaysMap;
+
+	private static class BirthdayEntry {
+		int day;
+		String name;
+
+		public BirthdayEntry(int day, String name) {
+			this.day = day;
+			this.name = name;
+		}
+	}
 
 	public CalendarBuilder() {
 	}
@@ -105,7 +116,7 @@ public class CalendarBuilder {
 			}
 			try {
 				LocalDate date = LocalDate.parse(birthdayData[1], DateTimeFormatter.ofPattern("d.M.uuuu"));
-				String label = birthdayData[0] + "(" + (year - date.getYear()) + ")";
+				String label = birthdayData[0] + " (" + (year - date.getYear()) + ")";
 				birthdaysMap.put(date.withYear(year), label);
 			} catch (DateTimeParseException e) {
 				writeErrorBirthdays(birthday);
@@ -259,7 +270,7 @@ public class CalendarBuilder {
 
 		line++;
 		line++;
-		
+
 		// fotka
 		String fileLine = fotoFileLines.get(sheetNo);
 		String[] fileInfo = fileLine.split("\t");
@@ -462,72 +473,130 @@ public class CalendarBuilder {
 		final int pictureIndex = workbook.addPicture(IOUtils.toByteArray(stream), Workbook.PICTURE_TYPE_PNG);
 
 		anchor.setCol1(0);
-		anchor.setCol2(7);
+		anchor.setCol2(10);
 		anchor.setRow1(1);
 		anchor.setRow2(22);
 		drawing.createPicture(anchor, pictureIndex);
 
 		// popisek fotky
-		createPhotoLabel(sheet, fileInfo[1]);
+		// createPhotoLabel(sheet, fileInfo[1]);
 
 		// dny, narozeniny a svátky
 		createDaysTable(sheet, sheetNo);
 	}
 
 	private void createDaysTable(Sheet sheet, int month) {
+
+		List<BirthdayEntry> birthdays = new ArrayList<>();
+
 		LocalDate localDate = LocalDate.of(year, month, 1);
-		int rowIndex = 23;
+		int rowStart = 23;
+		int rowIndex = rowStart;
 		Row dayRow = sheet.createRow(rowIndex);
-		Row svatekRow = sheet.createRow(rowIndex + 1);
-		Row birthdayRow = sheet.createRow(rowIndex + 2);
+		Row svatekRow = sheet.createRow(rowIndex + 2);
 		while (month == localDate.getMonthValue()) {
 			createDayCell(sheet, dayRow, localDate);
 			createSvatekCell(sheet, svatekRow, localDate);
-			createBirthdayCell(sheet, birthdayRow, localDate);
+			String value = birthdaysMap.get(localDate);
+			if (value != null)
+				birthdays.add(new BirthdayEntry(localDate.getDayOfMonth(), value));
 			localDate = localDate.plusDays(1);
 			// je další pondělí a jsem stále v tom stejném měsíci?
 			if (localDate.getDayOfWeek().getValue() == 1 && month == localDate.getMonthValue()) {
 				rowIndex += 3;
 				dayRow = sheet.createRow(rowIndex);
-				svatekRow = sheet.createRow(rowIndex + 1);
-				birthdayRow = sheet.createRow(rowIndex + 2);
+				svatekRow = sheet.createRow(rowIndex + 2);
 			}
 		}
+
+		createBirthdayList(sheet, rowStart, birthdays);
 	}
 
-	private void createPhotoLabel(Sheet sheet, String label) {
-		Row photoLabelRow = sheet.createRow(22);
-		Cell cell = photoLabelRow.createCell(0);
-		sheet.addMergedRegion(new CellRangeAddress(22, 22, 0, 6));
-		cell.setCellValue(label);
+	private void createBirthdayList(Sheet sheet, int rowStart, List<BirthdayEntry> birthdays) {
+		// Birthdays list
+		Row headerRow = sheet.getRow(rowStart);
+		Cell cell = headerRow.createCell(7);
+		sheet.addMergedRegion(new CellRangeAddress(rowStart, rowStart, 7, 9));
+		cell.setCellValue("Narozeniny");
 
 		CellStyle style = sheet.getWorkbook().createCellStyle();
-		style.setAlignment(HorizontalAlignment.RIGHT);
+		style.setAlignment(HorizontalAlignment.CENTER);
 		style.setVerticalAlignment(VerticalAlignment.CENTER);
 
 		Font font = sheet.getWorkbook().createFont();
 		font.setFontName("Castanet CE");
 		font.setBold(false);
-		font.setFontHeightInPoints((short) 8);
+		font.setFontHeightInPoints((short) 12);
 		style.setFont(font);
 
 		cell.setCellStyle(style);
-	}
 
-	private void createBirthdayCell(Sheet sheet, Row birthdayRow, LocalDate localDate) {
-		Cell cell = birthdayRow.createCell(localDate.getDayOfWeek().getValue() - 1);
-		cell.setCellValue(birthdaysMap.get(localDate));
+		sheet.setColumnWidth(7, 1000);
 
-		Font font = sheet.getWorkbook().createFont();
-		font.setFontName("Castanet CE");
-		font.setBold(false);
-		font.setFontHeightInPoints((short) 7);
-		font.setColor(HSSFColorPredefined.DARK_RED.getIndex());
+		int currentRowIndex = rowStart + 1;
+		for (BirthdayEntry be : birthdays) {
 
-		CellStyle style = sheet.getWorkbook().createCellStyle();
-		style.setFont(font);
+			Row beRow = sheet.getRow(currentRowIndex);
+			if (beRow == null)
+				beRow = sheet.createRow(currentRowIndex);
+
+			Cell beCell = beRow.createCell(7);
+			beCell.setCellValue(be.day);
+
+			style = sheet.getWorkbook().createCellStyle();
+			style.setAlignment(HorizontalAlignment.CENTER);
+			style.setVerticalAlignment(VerticalAlignment.CENTER);
+
+			font = sheet.getWorkbook().createFont();
+			font.setFontName("Castanet CE");
+			font.setBold(false);
+			font.setColor(HSSFColorPredefined.DARK_RED.getIndex());
+			font.setFontHeightInPoints((short) 8);
+			style.setFont(font);
+
+			beCell.setCellStyle(style);
+
+			beCell = beRow.createCell(8);
+			sheet.addMergedRegion(new CellRangeAddress(currentRowIndex, currentRowIndex, 8, 9));
+			beCell.setCellValue(be.name);
+
+			style = sheet.getWorkbook().createCellStyle();
+			style.setAlignment(HorizontalAlignment.CENTER);
+			style.setVerticalAlignment(VerticalAlignment.CENTER);
+
+			font = sheet.getWorkbook().createFont();
+			font.setFontName("Castanet CE");
+			font.setBold(false);
+			font.setFontHeightInPoints((short) 8);
+			style.setFont(font);
+
+			beCell.setCellStyle(style);
+
+			currentRowIndex++;
+		}
+
+		// Akce
+		int headerOffset = 8;
+		int headerRowIndex = rowStart + headerOffset;
+		headerRow = sheet.getRow(headerRowIndex);
+		if (headerRow == null)
+			headerRow = sheet.createRow(headerRowIndex);
+
+		cell = headerRow.createCell(7);
+		sheet.addMergedRegion(new CellRangeAddress(headerRowIndex, headerRowIndex, 7, 9));
+		cell.setCellValue("Nezapomeň!");
+
+		style = sheet.getWorkbook().createCellStyle();
 		style.setAlignment(HorizontalAlignment.CENTER);
 		style.setVerticalAlignment(VerticalAlignment.CENTER);
+
+		font = sheet.getWorkbook().createFont();
+		font.setFontName("Castanet CE");
+		font.setBold(false);
+		font.setColor(HSSFColorPredefined.DARK_RED.getIndex());
+		font.setFontHeightInPoints((short) 12);
+		style.setFont(font);
+
 		cell.setCellStyle(style);
 	}
 
@@ -552,6 +621,8 @@ public class CalendarBuilder {
 
 	private void createDayCell(Sheet sheet, Row dayRow, LocalDate localDate) {
 		Cell cell = dayRow.createCell(localDate.getDayOfWeek().getValue() - 1);
+		sheet.addMergedRegion(new CellRangeAddress(dayRow.getRowNum(), dayRow.getRowNum() + 1, cell.getColumnIndex(),
+				cell.getColumnIndex()));
 		cell.setCellValue(localDate.getDayOfMonth());
 
 		Font font = sheet.getWorkbook().createFont();
@@ -591,7 +662,7 @@ public class CalendarBuilder {
 
 	private void createMonthQuote(Sheet sheet, Row row, String quote) {
 		Cell cell = row.createCell(3);
-		sheet.addMergedRegion(new CellRangeAddress(0, 0, 3, 6));
+		sheet.addMergedRegion(new CellRangeAddress(0, 0, 3, 9));
 		cell.setCellValue(quote);
 
 		CellStyle style = sheet.getWorkbook().createCellStyle();
@@ -601,7 +672,7 @@ public class CalendarBuilder {
 		Font font = sheet.getWorkbook().createFont();
 		font.setFontName("Castanet CE");
 		font.setBold(false);
-		font.setFontHeightInPoints((short) 14);
+		font.setFontHeightInPoints((short) 10);
 		style.setFont(font);
 
 		cell.setCellStyle(style);
