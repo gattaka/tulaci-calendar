@@ -648,7 +648,7 @@ public class CalendarBuilder {
 		Font font = sheet.getWorkbook().createFont();
 		font.setFontName("Castanet CE");
 		font.setBold(false);
-		font.setFontHeightInPoints((short) 7);
+		font.setFontHeightInPoints((short) 8);
 
 		if (localDate.getDayOfWeek().getValue() > 5)
 			font.setColor(HSSFColorPredefined.GREY_50_PERCENT.getIndex());
