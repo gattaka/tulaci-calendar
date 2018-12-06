@@ -492,7 +492,7 @@ public class CalendarBuilder {
 		anchor.setCol1(0);
 		anchor.setCol2(10);
 		anchor.setRow1(1);
-		anchor.setRow2(29);
+		anchor.setRow2(28);
 		drawing.createPicture(anchor, pictureIndex);
 
 		// dny, narozeniny a svátky
@@ -504,7 +504,7 @@ public class CalendarBuilder {
 		List<BirthdayEntry> birthdays = new ArrayList<>();
 
 		LocalDate localDate = LocalDate.of(year, month, 1);
-		int rowStart = 30;
+		int rowStart = 29;
 		int rowIndex = rowStart;
 		Row dayRow = sheet.createRow(rowIndex);
 		Row svatekRow = sheet.createRow(rowIndex + 2);
@@ -531,16 +531,16 @@ public class CalendarBuilder {
 		Row headerRow = sheet.getRow(rowStart);
 		Cell cell = headerRow.createCell(7);
 		sheet.addMergedRegion(new CellRangeAddress(rowStart, rowStart, 7, 9));
-		cell.setCellValue("Narozeniny");
+		cell.setCellValue(" Narozeniny");
 
 		CellStyle style = sheet.getWorkbook().createCellStyle();
-		style.setAlignment(HorizontalAlignment.CENTER);
+		style.setAlignment(HorizontalAlignment.LEFT);
 		style.setVerticalAlignment(VerticalAlignment.CENTER);
 
 		Font font = sheet.getWorkbook().createFont();
 		font.setFontName("Castanet CE");
 		font.setBold(false);
-		font.setFontHeightInPoints((short) 12);
+		font.setFontHeightInPoints((short) 13);
 		style.setFont(font);
 
 		cell.setCellStyle(style);
@@ -575,7 +575,7 @@ public class CalendarBuilder {
 			beCell.setCellValue(be.name);
 
 			style = sheet.getWorkbook().createCellStyle();
-			style.setAlignment(HorizontalAlignment.CENTER);
+			style.setAlignment(HorizontalAlignment.LEFT);
 			style.setVerticalAlignment(VerticalAlignment.CENTER);
 
 			font = sheet.getWorkbook().createFont();
@@ -598,17 +598,17 @@ public class CalendarBuilder {
 
 		cell = headerRow.createCell(7);
 		sheet.addMergedRegion(new CellRangeAddress(headerRowIndex, headerRowIndex, 7, 9));
-		cell.setCellValue("Nezapomeň!");
+		cell.setCellValue(" Nezapomeň!");
 
 		style = sheet.getWorkbook().createCellStyle();
-		style.setAlignment(HorizontalAlignment.CENTER);
+		style.setAlignment(HorizontalAlignment.LEFT);
 		style.setVerticalAlignment(VerticalAlignment.CENTER);
 
 		font = sheet.getWorkbook().createFont();
 		font.setFontName("Castanet CE");
 		font.setBold(false);
 		font.setColor(HSSFColorPredefined.DARK_RED.getIndex());
-		font.setFontHeightInPoints((short) 12);
+		font.setFontHeightInPoints((short) 13);
 		style.setFont(font);
 
 		cell.setCellStyle(style);
@@ -635,7 +635,7 @@ public class CalendarBuilder {
 				headerRow = sheet.createRow(headerRowIndex + i);
 
 			cell = headerRow.createCell(7);
-			cell.setCellValue(akce.get(i));
+			cell.setCellValue("  " + akce.get(i));
 			cell.setCellStyle(style);
 		}
 
