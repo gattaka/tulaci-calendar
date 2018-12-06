@@ -15,6 +15,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.hssf.util.HSSFColor.HSSFColorPredefined;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
@@ -29,7 +30,6 @@ import org.apache.poi.ss.usermodel.VerticalAlignment;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.util.IOUtils;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 public class CalendarBuilder {
 
@@ -41,9 +41,11 @@ public class CalendarBuilder {
 	private int year;
 	private List<String> fotoFileLines;
 	private List<String> labelsFileLines;
+	private List<String> akceFileLines;
 
 	private Map<String, String> svatkyMap;
 	private Map<LocalDate, String> birthdaysMap;
+	private List<List<String>> akceList;
 
 	private static class BirthdayEntry {
 		int day;
@@ -65,9 +67,9 @@ public class CalendarBuilder {
 			throw new IllegalStateException("Soubor " + dataFilePath.toString() + " neexistuje");
 		List<String> files = Files.readAllLines(dataFilePath);
 
-		if (files.size() < 5)
+		if (files.size() < 6)
 			throw new IllegalStateException(
-					"Vyžaduji parametry: \n\t rok \n\t název souboru s popisky \n\t název souboru se svátky \n\t název souboru s narozeninami ");
+					"Vyžaduji parametry: \n\t rok \n\t název souboru s popisky \n\t název souboru se svátky \n\t název souboru s narozeninami \n\t název souboru s fotkami \n\t název souboru s akcemi");
 
 		try {
 			year = Integer.parseInt(files.get(0));
@@ -125,6 +127,7 @@ public class CalendarBuilder {
 		}
 
 		String fotoFileName = files.get(4);
+		System.out.println("Budu brát narozky ze souboru: \t" + fotoFileName);
 		fotoFileLines = Files.readAllLines(Paths.get(prefix, fotoFileName));
 		if (fotoFileLines.size() != 14) {
 			throw new IllegalStateException("Chyba souboru '" + fotoFileName + "' očekávám následující obsah:\n"
@@ -135,17 +138,31 @@ public class CalendarBuilder {
 					+ "\t jméno souboru fotky na poslední stránku\n");
 		}
 
-		System.out.println("Budu brát narozky ze souboru: \t" + fotoFileName);
+		akceList = new ArrayList<>();
+		String akceFileName = files.get(5);
+		akceFileLines = Files.readAllLines(Paths.get(prefix, akceFileName));
+		if (akceFileLines.size() != 12) {
+			throw new IllegalStateException("Chyba souboru '" + akceFileName + "' očekávám následující obsah:\n"
+					+ "\t akce leden1 -tabulátor- akce leden2 -tabulátor- ...\n"
+					+ "\t akce únor1 -tabulátor- akce únor2 -tabulátor- ...\n" + "\t ...");
+		} else {
+			for (String s : akceFileLines) {
+				List<String> akce = new ArrayList<>();
+				akceList.add(akce);
+				for (String a : s.split("\t"))
+					akce.add(a);
+			}
+		}
 
-		File file = new File("Tuláci kalendář " + year + ".xlsx");
+		File file = new File("Tuláci kalendář " + year + ".xls");
 
-		try (Workbook workbook = new XSSFWorkbook(); FileOutputStream fileOutputStream = new FileOutputStream(file)) {
+		try (Workbook workbook = new HSSFWorkbook(); FileOutputStream fileOutputStream = new FileOutputStream(file)) {
 
 			for (int sheetNo = 0; sheetNo < sheetNames.length; sheetNo++) {
 				Sheet sheet = workbook.createSheet(sheetNames[sheetNo]);
 
 				for (int c = 0; c < 7; c++)
-					sheet.setColumnWidth(c, 3000);
+					sheet.setColumnWidth(c, 2400);
 
 				switch (sheetNo) {
 				case 0:
@@ -189,9 +206,9 @@ public class CalendarBuilder {
 		final int pictureIndex = workbook.addPicture(IOUtils.toByteArray(stream), Workbook.PICTURE_TYPE_PNG);
 
 		anchor.setCol1(0);
-		anchor.setCol2(7);
+		anchor.setCol2(9);
 		anchor.setRow1(0);
-		anchor.setRow2(39);
+		anchor.setRow2(50);
 		drawing.createPicture(anchor, pictureIndex);
 	}
 
@@ -217,7 +234,7 @@ public class CalendarBuilder {
 		Row row = sheet.createRow(line);
 		Cell cell = row.createCell(0);
 		cell.setCellStyle(style);
-		sheet.addMergedRegion(new CellRangeAddress(line, line + 2, 0, 6));
+		sheet.addMergedRegion(new CellRangeAddress(line, line + 2, 0, 8));
 		cell.setCellValue("Tulácký kalendář");
 
 		line += 3;
@@ -225,7 +242,7 @@ public class CalendarBuilder {
 		row = sheet.createRow(line);
 		cell = row.createCell(0);
 		cell.setCellStyle(style);
-		sheet.addMergedRegion(new CellRangeAddress(line, line + 2, 0, 6));
+		sheet.addMergedRegion(new CellRangeAddress(line, line + 2, 0, 8));
 		cell.setCellValue(year);
 
 		line += 3;
@@ -249,7 +266,7 @@ public class CalendarBuilder {
 		row = sheet.createRow(line);
 		cell = row.createCell(0);
 		cell.setCellStyle(style);
-		sheet.addMergedRegion(new CellRangeAddress(line, line, 0, 6));
+		sheet.addMergedRegion(new CellRangeAddress(line, line, 0, 8));
 		cell.setCellValue("Aktivity našeho oddílu jsou podporovány");
 
 		line++;
@@ -257,7 +274,7 @@ public class CalendarBuilder {
 		row = sheet.createRow(line);
 		cell = row.createCell(0);
 		cell.setCellStyle(style);
-		sheet.addMergedRegion(new CellRangeAddress(line, line, 0, 6));
+		sheet.addMergedRegion(new CellRangeAddress(line, line, 0, 8));
 		cell.setCellValue("mladými ochránci přírody z prostředků");
 
 		line++;
@@ -265,7 +282,7 @@ public class CalendarBuilder {
 		row = sheet.createRow(line);
 		cell = row.createCell(0);
 		cell.setCellStyle(style);
-		sheet.addMergedRegion(new CellRangeAddress(line, line, 0, 6));
+		sheet.addMergedRegion(new CellRangeAddress(line, line, 0, 8));
 		cell.setCellValue("MŠMT a MHMP.");
 
 		line++;
@@ -290,13 +307,13 @@ public class CalendarBuilder {
 
 		final int pictureIndex = workbook.addPicture(IOUtils.toByteArray(stream), Workbook.PICTURE_TYPE_PNG);
 
-		anchor.setCol1(0);
-		anchor.setCol2(7);
+		anchor.setCol1(1);
+		anchor.setCol2(8);
 		anchor.setRow1(line);
-		anchor.setRow2(line + 10);
+		anchor.setRow2(line + 19);
 		drawing.createPicture(anchor, pictureIndex);
 
-		line += 11;
+		line += 20;
 
 		/*
 		 * text 3
@@ -316,15 +333,15 @@ public class CalendarBuilder {
 		row = sheet.createRow(line);
 		cell = row.createCell(0);
 		cell.setCellStyle(style);
-		sheet.addMergedRegion(new CellRangeAddress(line, line, 0, 6));
-		cell.setCellValue("vydáno jako 95. publikace oddílového nakladatelství NAKOLENĚ");
+		sheet.addMergedRegion(new CellRangeAddress(line, line, 0, 8));
+		cell.setCellValue("vydáno jako 96. publikace oddílového nakladatelství NAKOLENĚ");
 
 		line++;
 
 		row = sheet.createRow(line);
 		cell = row.createCell(0);
 		cell.setCellStyle(style);
-		sheet.addMergedRegion(new CellRangeAddress(line, line, 0, 6));
+		sheet.addMergedRegion(new CellRangeAddress(line, line, 0, 8));
 		cell.setCellValue("neprodejný materiál pro členy a příznivce oddílu TULÁCI");
 
 		line++;
@@ -332,7 +349,7 @@ public class CalendarBuilder {
 		row = sheet.createRow(line);
 		cell = row.createCell(0);
 		cell.setCellStyle(style);
-		sheet.addMergedRegion(new CellRangeAddress(line, line, 0, 6));
+		sheet.addMergedRegion(new CellRangeAddress(line, line, 0, 8));
 		cell.setCellValue("prosinec " + (year - 1) + ", vydání prvé, náklad závratný (25 ks)");
 
 		line++;
@@ -356,7 +373,7 @@ public class CalendarBuilder {
 		row = sheet.createRow(line);
 		cell = row.createCell(0);
 		cell.setCellStyle(style);
-		sheet.addMergedRegion(new CellRangeAddress(line, line, 0, 6));
+		sheet.addMergedRegion(new CellRangeAddress(line, line, 0, 8));
 		cell.setCellValue("Všechny fotografie pochází z fotoaparátů členů oddílu, jakákoliv podobnost");
 
 		line++;
@@ -364,7 +381,7 @@ public class CalendarBuilder {
 		row = sheet.createRow(line);
 		cell = row.createCell(0);
 		cell.setCellStyle(style);
-		sheet.addMergedRegion(new CellRangeAddress(line, line, 0, 6));
+		sheet.addMergedRegion(new CellRangeAddress(line, line, 0, 8));
 		cell.setCellValue(" s fotografiemi jiných autorů je čistě náhodná. ");
 
 		line++;
@@ -387,7 +404,7 @@ public class CalendarBuilder {
 		row = sheet.createRow(line);
 		cell = row.createCell(0);
 		cell.setCellStyle(style);
-		sheet.addMergedRegion(new CellRangeAddress(line, line, 0, 6));
+		sheet.addMergedRegion(new CellRangeAddress(line, line, 0, 8));
 		cell.setCellValue("Neneseme odpovědnost za pohoršení při prohlížení kalendáře.");
 
 		line++;
@@ -411,7 +428,7 @@ public class CalendarBuilder {
 		row = sheet.createRow(line);
 		cell = row.createCell(0);
 		cell.setCellStyle(style);
-		sheet.addMergedRegion(new CellRangeAddress(line, line, 0, 6));
+		sheet.addMergedRegion(new CellRangeAddress(line, line, 0, 8));
 		cell.setCellValue("Kontakt na oddíl (působící v Praze 10)");
 
 		line++;
@@ -419,7 +436,7 @@ public class CalendarBuilder {
 		row = sheet.createRow(line);
 		cell = row.createCell(0);
 		cell.setCellStyle(style);
-		sheet.addMergedRegion(new CellRangeAddress(line, line, 0, 6));
+		sheet.addMergedRegion(new CellRangeAddress(line, line, 0, 8));
 		cell.setCellValue("Klára Adámková, tel.: 728 734 009, email: oddil@tulaci.eu");
 
 		line++;
@@ -443,7 +460,7 @@ public class CalendarBuilder {
 		row = sheet.createRow(line);
 		cell = row.createCell(0);
 		cell.setCellStyle(style);
-		sheet.addMergedRegion(new CellRangeAddress(line, line, 0, 6));
+		sheet.addMergedRegion(new CellRangeAddress(line, line, 0, 8));
 		cell.setCellValue("Vše o nás najdete na http://oddil.tulaci.eu");
 
 	}
@@ -475,11 +492,8 @@ public class CalendarBuilder {
 		anchor.setCol1(0);
 		anchor.setCol2(10);
 		anchor.setRow1(1);
-		anchor.setRow2(22);
+		anchor.setRow2(29);
 		drawing.createPicture(anchor, pictureIndex);
-
-		// popisek fotky
-		// createPhotoLabel(sheet, fileInfo[1]);
 
 		// dny, narozeniny a svátky
 		createDaysTable(sheet, sheetNo);
@@ -490,7 +504,7 @@ public class CalendarBuilder {
 		List<BirthdayEntry> birthdays = new ArrayList<>();
 
 		LocalDate localDate = LocalDate.of(year, month, 1);
-		int rowStart = 23;
+		int rowStart = 30;
 		int rowIndex = rowStart;
 		Row dayRow = sheet.createRow(rowIndex);
 		Row svatekRow = sheet.createRow(rowIndex + 2);
@@ -509,10 +523,10 @@ public class CalendarBuilder {
 			}
 		}
 
-		createBirthdayList(sheet, rowStart, birthdays);
+		createBirthdayAndAkceLists(sheet, rowStart, birthdays, month);
 	}
 
-	private void createBirthdayList(Sheet sheet, int rowStart, List<BirthdayEntry> birthdays) {
+	private void createBirthdayAndAkceLists(Sheet sheet, int rowStart, List<BirthdayEntry> birthdays, int month) {
 		// Birthdays list
 		Row headerRow = sheet.getRow(rowStart);
 		Cell cell = headerRow.createCell(7);
@@ -598,6 +612,33 @@ public class CalendarBuilder {
 		style.setFont(font);
 
 		cell.setCellStyle(style);
+
+		headerRowIndex++;
+
+		style = sheet.getWorkbook().createCellStyle();
+		style.setAlignment(HorizontalAlignment.LEFT);
+		style.setVerticalAlignment(VerticalAlignment.CENTER);
+
+		font = sheet.getWorkbook().createFont();
+		font.setFontName("Castanet CE");
+		font.setBold(false);
+		font.setFontHeightInPoints((short) 8);
+		style.setFont(font);
+
+		List<String> akce = akceList.get(month - 1);
+		for (int i = 0; i < 5; i++) {
+			if (i >= akce.size())
+				continue;
+			sheet.addMergedRegion(new CellRangeAddress(headerRowIndex + i, headerRowIndex + i, 7, 9));
+			headerRow = sheet.getRow(headerRowIndex + i);
+			if (headerRow == null)
+				headerRow = sheet.createRow(headerRowIndex + i);
+
+			cell = headerRow.createCell(7);
+			cell.setCellValue(akce.get(i));
+			cell.setCellStyle(style);
+		}
+
 	}
 
 	private void createSvatekCell(Sheet sheet, Row svatekRow, LocalDate localDate) {
@@ -629,13 +670,13 @@ public class CalendarBuilder {
 		font.setFontName("Castanet CE");
 		font.setBold(false);
 		font.setFontHeightInPoints((short) 28);
-
 		if (localDate.getDayOfWeek().getValue() > 5)
 			font.setColor(HSSFColorPredefined.GREY_50_PERCENT.getIndex());
 
 		CellStyle style = sheet.getWorkbook().createCellStyle();
 		style.setFont(font);
 		style.setAlignment(HorizontalAlignment.CENTER);
+		style.setVerticalAlignment(VerticalAlignment.CENTER);
 		cell.setCellStyle(style);
 	}
 
